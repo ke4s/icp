@@ -1,0 +1,13 @@
+type Profile = record {
+    "name": text;
+    "description": text;
+    "subject": text;
+    "hash": text;
+    "bookName": text;
+};
+
+service : {
+    "getSelf": () -> (Profile) query;
+    "update": (Profile) -> (opt Profile);
+    "search": (text) -> (opt Profile) query;
+};

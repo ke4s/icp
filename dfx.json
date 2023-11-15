@@ -1,0 +1,30 @@
+{
+  "canisters": {
+    "cc_backend": {
+      "candid": "src/cc_backend/cc_backend.did",
+      "package": "cc_backend",
+      "type": "rust"
+    },
+    "cc_frontend": {
+      "dependencies": [
+        "cc_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/cc_frontend/src/index.html"
+      },
+      "source": [
+        "src/cc_frontend/assets",
+        "dist/cc_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
