@@ -3,12 +3,13 @@ use ic_cdk::{
         candid::{CandidType, Deserialize},
         Principal,
     },
-    query, update,
+    update,
 };
-use std::cell::RefCell;
-use std::collections::BTreeMap;
 
-type IdStore = BTreeMap<String, Principal>;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet};
+
+type IdStore = BTreeMap<String, BTreeSet<Principal>>;
 type ProfileStore = BTreeMap<Principal, Profile>;
 
 #[derive(Clone, Debug, Default, CandidType, Deserialize)]
@@ -17,7 +18,7 @@ struct Profile {
     pub description: String,
     pub subject: String,
     pub hash: String,
-    pub bookName: String,
+    pub book_name: String,
 }   
 
 thread_local! {
@@ -25,78 +26,38 @@ thread_local! {
     static ID_STORE: RefCell<IdStore> = RefCell::default();
 }
 
-#[query(name = "getSelf")]
-fn get_self() -> Profile {
-    let id = ic_cdk::api::caller();
-    PROFILE_STORE.with(|profile_store| {
-        profile_store
-            .borrow()
-            .get(&id)
-            .cloned().unwrap_or_default()
-    })
-}
-
-fn get(hash: String) -> Option<Profile> {
-    ID_STORE.with(|id_store| {
-        PROFILE_STORE.with(|profile_store| {
-            id_store
-                .borrow()
-                .get(&hash)
-                .and_then(|id| profile_store.borrow().get(id).cloned())
-        })
-    })
-}
-
 #[update]
-fn update(new_profile: Profile) -> Option<Profile> {
-    match get(new_profile.hash.clone()) {
-        Some(profile) => {
-            // Profil zaten var, istediğiniz işlemleri yapabilirsiniz.
-            // Ancak, dönüş türü Option<Profile> olduğu için burada bir değer döndürmek zorundasınız.
-            // Eğer bir değer döndürmek istemiyorsanız, bu satırı kaldırabilirsiniz.
-            Some(profile)
-        }
-        None => {
-            let principal_id = ic_cdk::api::caller();
+fn update(hash: String, name: String, book_name: String, subject: String, description: String) -> String {
+    let principal = ic_cdk::api::caller();
+    let new_profile = Profile {
+        hash: hash.clone(),
+        name: name.clone(),
+        book_name: book_name.clone(),
+        description: description.clone(),
+        subject: subject.clone(),
+    };
+
+    PROFILE_STORE.with(|store| {
+        let mut store = store.borrow_mut();
+
+        let is_hash_exist = ID_STORE.with(|id_store| {
+            id_store.borrow().get(&hash).map_or(false, |set| set.contains(&principal))
+        });
+
+        if is_hash_exist {
+            let err = format!("This book already exists in our database.");
+            String::from(err)
+        } else {
             ID_STORE.with(|id_store| {
+                let mut id_store = id_store.borrow_mut();
                 id_store
-                    .borrow_mut()
-                    .insert(new_profile.name.clone(), principal_id);
-            });
-            PROFILE_STORE.with(|profile_store| {
-                profile_store
-                    .borrow_mut()
-                    .insert(principal_id, new_profile.clone());
+                    .entry(hash.clone())
+                    .or_insert_with(BTreeSet::new)
+                    .insert(principal);
             });
 
-            // Eğer bir değer döndürmek istemiyorsanız, sadece None döndürün.
-            None
+            store.insert(principal, new_profile.clone());
+            String::from("Your book is uploaded")
         }
-    }
+    })
 }
-
-/*
-
-fn update(new_profile: Profile) -> Option<Profile> {
-
-    match get(new_profile.hash) {
-        Some(profile) => {
-            return profile;
-        }
-        None => {
-            let principal_id = ic_cdk::api::caller();
-            ID_STORE.with(|id_store| {
-                id_store
-                    .borrow_mut()
-                    .insert(new_profile.name.clone(), principal_id);
-            });
-            PROFILE_STORE.with(|profile_store| {
-                profile_store.borrow_mut().insert(principal_id, new_profile.clone());
-            });
-            None
-        }
-    }
-
-
-}
-*/

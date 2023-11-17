@@ -3,19 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>hehe</title>
+    <title>Upload Book</title>
     <base href="/" />
     <link rel="icon" href="favicon.ico" />
     <link type="text/css" rel="stylesheet" href="main.css" />
   </head>
   <body>
-    <main>
+    <main id="main">
       <form action="#">
         <label for="name">Choose Book as PDF: &nbsp;</label>
-        <input id="name" alt="Name" type="file" />
+        <input type="file" id="pdfFile" accept=".pdf">
+        
+        <label for="name">Name: </label>
+        <input id="name" alt="Name" type="input" />
+        
+        <label for="book_name">Book Name: </label>
+        <input id="book_name" alt="Book Name" type="input" />
+        
+        <label for="subject">Subject: </label>
+        <input id="subject" alt="Subject" type="input" />
+        
+        <label for="description">Description: </label>
+        <input id="description" alt="Description" type="input" />
+        
         <button type="submit">Upload Book</button>
+        <div id="progressLabel"></div>
+        <progress id="progressBar" value="0" max="100"></progress>
       </form>
-      <section id="greeting"></section>
     </main>
   </body>
 </html>

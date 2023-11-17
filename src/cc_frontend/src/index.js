@@ -1,36 +1,81 @@
-import { hehe_backend } from "../../declarations/cc_backend";
 
-function hashFnv32a(str, asString, seed) {
-  var i, l,
-      hval = (seed === undefined) ? 0x811c9dc5 : seed;
+import { cc_backend } from "../../declarations/cc_backend";
 
-  for (i = 0, l = str.length; i < l; i++) {
-      hval ^= str.charCodeAt(i);
-      hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
+async function hashPDF() {
+  const fileInput = document.getElementById('pdfFile');
+
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+
+    const arrayBuffer = await readFile(file);
+
+    const hash = await hashData(arrayBuffer);
+    return "SHA-256_" + hash;
+  } else {
+    alert('Please select a PDF file.');
   }
-  if( asString ){
-      return ("0000000" + (hval >>> 0).toString(16)).substr(-8);
-  }
-  return hval >>> 0;
+
 }
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+      resolve(event.target.result);
+    };
+
+    reader.onerror = function (event) {
+      reject(event.target.error);
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function hashData(data) {
+  const buffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(buffer));
+  const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
 document.querySelector("form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const button = e.target.querySelector("button");
 
-  var fullPath = document.getElementById('name').value;
-  if (fullPath) {
-      var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
-      var filename = fullPath.substring(startIndex);
-      if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
-          filename = filename.substring(1);
-      }
+  var name = document.getElementById('name').value;
+  var book_name = document.getElementById('book_name').value;
+  var subject = document.getElementById('subject').value;
+  var description = document.getElementById('description').value;
+
+  if (name.trim() == '' || book_name.trim() == '' || description.trim() == '' || subject.trim() == '') {
+    alert('Please fill out all required fields before proceeding.');
+    return;
   }
 
-  var hashCode = "Fnv32a_" + hashFnv32a(filename);
-  alert(hashCode);
-  const greeting = await hehe_backend.greet(hashCode);
+  const hash = await hashPDF();
 
-  document.getElementById("greeting").innerText = greeting;
+  const progressBar = document.getElementById('progressBar');
+  const progressLabel = document.getElementById('progressLabel');
 
-  return false;
+  progressBar.style.display = 'block';
+  progressLabel.innerText = 'Uploading...';
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    for (let i = 1; i <= 100; i++) {
+      progressBar.value = i;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+
+    const response = await cc_backend.update(hash, name, book_name, subject, description);
+    alert(response);
+  } catch (error) {
+    alert('Error!');
+  } finally {
+    progressBar.style.display = 'none';
+    progressLabel.innerText = '';
+    progressBar.value = 0;
+  }
 });
